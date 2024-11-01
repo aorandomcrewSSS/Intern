@@ -7,24 +7,23 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
-import org.telegram.telegrambots.meta.api.methods.GetFile;
+
 import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
-import org.telegram.telegrambots.meta.api.objects.Document;
-import org.telegram.telegrambots.meta.api.objects.File;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
+import java.io.IOException;;
 import java.util.HashMap;
 import java.util.Map;
 
-
+/**
+ * Основной класс Telegram бота, обрабатывающий команды пользователя
+ * Включает команды для добавления и удаления категорий, просмотра дерева и выгрузки дерева категорий в Excel
+ */
 @Slf4j
 @Service
 public class TelegramBot extends TelegramLongPollingBot {
@@ -50,6 +49,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         return botConfig.getBotToken();
     }
 
+    /**
+     * Обрабатывает сообщения от пользователей, распознавая команды
+     * Вызывет соответствующие методы для каждой команды
+     */
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
@@ -130,12 +133,17 @@ public class TelegramBot extends TelegramLongPollingBot {
                 /help - Вывод справки
                 """;
     }
+    /**
+     * Метод, который выводит приветственное сообщение
+     */
     private void startCommandReceived(long chatId, String name) {
         String answer = "Привет! " + name + " используй следующие команды, чтобы построить дерево!" + "\n" + help();
         log.info("replied to user " + answer);
         sendMessage(chatId, answer);
     }
-
+    /**
+     * Метод, который принимает в качестве параметра id пользователя и необходимый текст для отправкм пользователю
+     */
     private void sendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));

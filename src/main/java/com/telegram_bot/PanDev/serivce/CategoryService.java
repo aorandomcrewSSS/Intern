@@ -19,7 +19,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
+/**
+ * Сервис для выполнения операций над категориями
+ */
 @Slf4j
 @Service
 public class CategoryService {
@@ -29,6 +31,9 @@ public class CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
+    /**
+     * Инициализирует корневую категорию, если она не существует
+     */
     @PostConstruct
     public void initRootCategory() {
         if (categoryRepository.findByName("Root") == null) {
@@ -37,6 +42,9 @@ public class CategoryService {
         }
     }
 
+    /**
+     * Форматирует дерево категорий для вывода в виде строки
+     */
     public String formatTree() {
         Category root = categoryRepository.findByName("Root");
         if (root == null) return "Дерево категорий пусто.";
@@ -46,6 +54,9 @@ public class CategoryService {
         return sb.toString();
     }
 
+    /**
+     * Рекурсивно обходит дерево категорий, добавляя названия категорий в StringBuilder
+     */
     private void formatTreeRecursive(Category category, StringBuilder sb, int level) {
         for (int i = 0; i < level; i++) {
             sb.append("--");
@@ -56,13 +67,19 @@ public class CategoryService {
         }
     }
 
+    /**
+     *  Удаляет категории и все её дочерние категории
+     *  Рекурсивно проходит по всем дочерним категориям и вызывает себя для их удаления, а затем удаляет саму категорию из репозитория
+     */
     private void removeRecursive(Category category) {
         for (Category child : category.getChildrens()) {
             removeRecursive(child);
         }
         categoryRepository.delete(category);
     }
-
+    /**
+     * Добавляет новую категорию с указанным родителем
+     */
     @Transactional
     public String addElement(String parentName, String elementName) {
         Category parent = categoryRepository.findByName(parentName);
@@ -80,7 +97,9 @@ public class CategoryService {
         return "Категория добавлена.";
     }
 
-
+    /**
+     * Удаляет категорию и все её дочерние категории.
+     */
     @Transactional public String removeElement(String elementName) {
         Category category = categoryRepository.findByName(elementName);
         if (category == null) {
@@ -91,6 +110,10 @@ public class CategoryService {
         return "Категория удалена.";
     }
 
+    /**
+     * Экспортирует дерево категорий в Excel файл
+     *
+     */
     public byte[] exportCategoriesToExcel() throws IOException {
         try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             Sheet sheet = workbook.createSheet("Categories");

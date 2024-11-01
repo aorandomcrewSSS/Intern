@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 
 import java.util.ArrayList;
 import java.util.List;
-//Модель категории
+
+/**
+ * Сущность категории
+ */
 @Entity
 @Table(name = "categories")
 public class Category {

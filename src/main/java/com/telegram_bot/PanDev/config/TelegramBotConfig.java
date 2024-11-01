@@ -5,7 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
-//конфигурационный класс бота изпользующий покет application.properties
+/**
+ * Конфигурация для Telegram бота, загружающая данные из файла настроек.
+ */
 @Configuration
 @Data
 @PropertySource("application.properties")
