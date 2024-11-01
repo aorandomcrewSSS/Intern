@@ -1,11 +1,10 @@
 package com.telegram_bot.PanDev.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
-
+//Модель категории
 @Entity
 @Table(name = "categories")
 public class Category {

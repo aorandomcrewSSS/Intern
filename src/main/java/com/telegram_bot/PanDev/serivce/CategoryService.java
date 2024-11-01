@@ -4,8 +4,23 @@ import com.telegram_bot.PanDev.model.Category;
 import com.telegram_bot.PanDev.repository.CategoryRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+
+@Slf4j
 @Service
 public class CategoryService {
     private final CategoryRepository categoryRepository;
@@ -74,6 +89,66 @@ public class CategoryService {
 
         removeRecursive(category);
         return "Категория удалена.";
+    }
+
+    public byte[] exportCategoriesToExcel() throws IOException {
+        try (Workbook workbook = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = workbook.createSheet("Categories");
+
+            // Создаем заголовок
+            Row headerRow = sheet.createRow(0);
+            headerRow.createCell(0).setCellValue("ID");
+            headerRow.createCell(1).setCellValue("Name");
+            headerRow.createCell(2).setCellValue("Parent ID");
+
+            // Заполняем данные категорий
+            List<Category> categories = categoryRepository.findAll();
+            int rowNum = 1;
+            for (Category category : categories) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(category.getId());
+                row.createCell(1).setCellValue(category.getName());
+
+                // Проверяем, что parent не равен null
+                Long parentId = category.getParent() != null ? category.getParent().getId() : null;
+                if (parentId != null) {
+                    row.createCell(2).setCellValue(parentId);
+                } else {
+                    row.createCell(2).setBlank();
+                }
+            }
+
+            workbook.write(out);
+            return out.toByteArray();
+        }
+    }
+
+    @Transactional
+    public String importCategoriesFromExcel(InputStream excelData) {
+        try (Workbook workbook = WorkbookFactory.create(excelData)) {
+            Sheet sheet = workbook.getSheetAt(0);
+
+            Map<Long, Category> categoriesById = new HashMap<>();
+            for (Row row : sheet) {
+                if (row.getRowNum() == 0) continue;
+
+                Long id = (long) row.getCell(0).getNumericCellValue();
+                String name = row.getCell(1).getStringCellValue();
+                Long parentId = row.getCell(2) != null ? (long) row.getCell(2).getNumericCellValue() : null;
+
+                Category category = new Category(name);
+                categoriesById.put(id, category);
+                if (parentId != null) {
+                    Category parent = categoriesById.get(parentId);
+                    parent.addChild(category);
+                }
+                categoryRepository.save(category);
+            }
+            return "Импорт завершен.";
+        } catch (Exception e) {
+            log.error("Error during import: " + e.getMessage());
+            return "Ошибка импорта.";
+        }
     }
 
 }

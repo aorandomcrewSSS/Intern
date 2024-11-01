@@ -1,12 +1,29 @@
 package com.telegram_bot.PanDev.serivce;
 
 import com.telegram_bot.PanDev.config.TelegramBotConfig;
+
 import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+
+import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.methods.send.SendDocument;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+
+import org.telegram.telegrambots.meta.api.objects.Document;
+import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+
 
 @Slf4j
 @Service
@@ -15,6 +32,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final TelegramBotConfig botConfig;
 
     private final CategoryService categoryService;
+
+    private final Map<Long, String> lastCommands = new HashMap<>();
 
     public TelegramBot(TelegramBotConfig botConfig, CategoryService categoryService) {
         this.botConfig = botConfig;
@@ -33,38 +52,71 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        String response;
-        if(update.hasMessage() && update.getMessage().hasText()){
+        if (update.hasMessage() && update.getMessage().hasText()) {
             String messageText = update.getMessage().getText();
-            long chatId = update.getMessage().getChatId();
-            String[] parts = messageText.split(" ");
 
-            switch (parts[0]) {
+            Long chatId = update.getMessage().getChatId();
+            if (chatId == null) {
+                log.error("Chat ID is null. Cannot proceed with the command.");
+                return;
+            }
+
+            // Разбиваем текст сообщения на команду и аргументы
+            String[] parts = messageText.split(" ");
+            String command = parts[0];
+
+            switch (command) {
                 case "/start":
                     startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
                     break;
+
                 case "/viewTree":
                     sendMessage(chatId, categoryService.formatTree());
                     break;
+
                 case "/addElement":
-                    if (parts.length == 3) {
-                        sendMessage(chatId, categoryService.addElement(parts[1], parts[2]));
+                    if (parts.length == 3) {  // Проверяем, что команда содержит два аргумента
+                        String parentName = parts[1];
+                        String elementName = parts[2];
+                        sendMessage(chatId, categoryService.addElement(parentName, elementName));
                     } else {
                         sendMessage(chatId, "Неверный формат. Используйте /addElement <родитель> <название>");
                     }
                     break;
+
                 case "/removeElement":
-                    if (parts.length == 2) {
-                        sendMessage(chatId, categoryService.removeElement(parts[1]));
+                    if (parts.length == 2) {  // Проверяем, что команда содержит один аргумент
+                        String elementName = parts[1];
+                        sendMessage(chatId, categoryService.removeElement(elementName));
                     } else {
                         sendMessage(chatId, "Неверный формат. Используйте /removeElement <название>");
                     }
                     break;
+
+                case "/download":
+                    try {
+                        byte[] excelData = categoryService.exportCategoriesToExcel();
+                        SendDocument document = new SendDocument();
+                        document.setChatId(String.valueOf(chatId));
+                        document.setDocument(new InputFile(new ByteArrayInputStream(excelData), "categories.xlsx"));
+                        execute(document);
+                    } catch (IOException | TelegramApiException e) {
+                        log.error("Ошибка при отправке документа: " + e.getMessage());
+                        sendMessage(chatId, "Произошла ошибка при выгрузке файла.");
+                    }
+                    break;
+
+                case "/upload":
+                    sendMessage(chatId, "Отправьте файл Excel для импорта.");
+                    lastCommands.put(chatId, "/upload");
+                    break;
+
                 case "/help":
                     sendMessage(chatId, help());
                     break;
+
                 default:
-                    sendMessage(chatId, "Sorry, unknown command");
+                    sendMessage(chatId, "Команда не распознана. Используйте /help для справки.");
             }
         }
 
