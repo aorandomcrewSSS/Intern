@@ -130,6 +130,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 /viewTree - Просмотр дерева категорий
                 /addElement <родитель> <название> - Добавление категории
                 /removeElement <название> - Удаление категории
+                /download - Скачивать Excel документ с деревом категорий.
+                /upload - Отправить Excel документ с деревом категорий и сохранить все элементы в базе данных.
                 /help - Вывод справки
                 """;
     }
